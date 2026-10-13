@@ -1,0 +1,4 @@
+[submodule "third_party/OpenPLC_v3"]
+	path = third_party/OpenPLC_v3
+	url = https://github.com/thiagoralves/OpenPLC_v3
+	ignore = dirty
