@@ -1,0 +1,51 @@
+# 仮想検定くん I/O 定義
+#
+# bit: Modbus のビット番号 (0 始まり)。OpenPLC のアドレスは自動で決まります。
+#   入力  bit N -> %IX(100 + N/8).(N%8)   例: bit 0 -> %IX100.0, bit 9 -> %IX101.1
+#   出力  bit N -> %QX(100 + N/8).(N%8)   例: bit 0 -> %QX100.0
+# label: 実機 PLC 側のデバイス名 (対応表の表示用。三菱なら X0/Y0 など)
+#
+# 入力の type:
+#   momentary  押している間だけ ON (押しボタン)
+#   alternate  押すたびに ON/OFF (セレクトスイッチ・トグル)
+#   sensor     plant (下記) が自動で ON/OFF する。パネルから手動で強制も可能
+# normally_closed: true にすると b 接点 (操作していない時に ON)。非常停止など
+#
+# 出力の type: lamp / buzzer / solenoid / motor (パネルの表示が変わるだけ)
+
+modbus:
+  host: 0.0.0.0
+  port: 5020
+  unit_id: 1
+
+inputs:
+  - {name: PB1, label: X0,  bit: 0, type: momentary, text: "PB1 運転"}
+  - {name: PB2, label: X1,  bit: 1, type: momentary, text: "PB2 停止"}
+  - {name: PB3, label: X2,  bit: 2, type: momentary, text: "PB3"}
+  - {name: PB4, label: X3,  bit: 3, type: momentary, text: "PB4"}
+  - {name: SS1, label: X4,  bit: 4, type: alternate, text: "SS1 手動/自動"}
+  - {name: SS2, label: X5,  bit: 5, type: alternate, text: "SS2"}
+  - {name: EMG, label: X6,  bit: 6, type: momentary, normally_closed: true, text: "非常停止 (b接点)"}
+  - {name: LS1, label: X7,  bit: 7, type: sensor, text: "LS1 シリンダ後退端"}
+  - {name: LS2, label: X10, bit: 8, type: sensor, text: "LS2 シリンダ前進端"}
+
+outputs:
+  - {name: L1,   label: Y0, bit: 0, type: lamp, color: red,    text: "L1 運転"}
+  - {name: L2,   label: Y1, bit: 1, type: lamp, color: green,  text: "L2 停止"}
+  - {name: L3,   label: Y2, bit: 2, type: lamp, color: orange, text: "L3"}
+  - {name: L4,   label: Y3, bit: 3, type: lamp, color: orange, text: "L4"}
+  - {name: L5,   label: Y4, bit: 4, type: lamp, color: white,  text: "L5"}
+  - {name: L6,   label: Y5, bit: 5, type: lamp, color: white,  text: "L6 異常"}
+  - {name: BZ,   label: Y6, bit: 6, type: buzzer,              text: "BZ ブザー"}
+  - {name: SOL1, label: Y7, bit: 7, type: solenoid,            text: "SOL1 シリンダ前進"}
+
+# 仮想の設備。出力に応じてセンサ入力を自動で動かします
+plant:
+  cylinders:
+    # 単動 (スプリングリターン) シリンダ: SOL1 ON で前進、OFF で後退
+    - name: CYL1
+      extend_output: SOL1
+      retract_output: ""      # 複動にする場合は後退用の出力名を指定
+      retracted_sensor: LS1
+      extended_sensor: LS2
+      stroke_time: 1.5        # 端から端までの移動時間 [s]
