@@ -136,7 +136,10 @@ def handle_pdu(store: BitStore, pdu: bytes) -> bytes:
 def _recv_exact(sock, n: int) -> Optional[bytes]:
     buf = b''
     while len(buf) < n:
-        chunk = sock.recv(n - len(buf))
+        try:
+            chunk = sock.recv(n - len(buf))
+        except ConnectionError:  # OpenPLC 再起動時のリセットなど
+            return None
         if not chunk:
             return None
         buf += chunk
@@ -161,7 +164,10 @@ class _Handler(socketserver.BaseRequestHandler):
                 continue
             server.last_request = time.monotonic()
             resp = handle_pdu(server.store, pdu)
-            self.request.sendall(struct.pack('>HHHB', tid, 0, len(resp) + 1, unit) + resp)
+            try:
+                self.request.sendall(struct.pack('>HHHB', tid, 0, len(resp) + 1, unit) + resp)
+            except ConnectionError:
+                return
 
 
 class ModbusTcpSlave(socketserver.ThreadingTCPServer):

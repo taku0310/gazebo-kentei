@@ -50,3 +50,14 @@ def test_sample_program_matches_config():
 def test_invalid_config(data, message):
     with pytest.raises(ValueError, match=message):
         parse_config(data)
+
+
+def test_plant_sensors():
+    cfg = load_config(CONFIG)
+    assert cfg.plant_sensors == {'LS1', 'LS2'}
+    cfg = parse_config({
+        'inputs': [{'name': 'LS1', 'bit': 0, 'type': 'sensor'}],
+        'outputs': [{'name': 'SOL', 'bit': 0}],
+        'plant': {'cylinders': [{'name': 'C', 'extend_output': 'SOL', 'retracted_sensor': 'LS1'}]},
+    })
+    assert cfg.plant_sensors == {'LS1'}

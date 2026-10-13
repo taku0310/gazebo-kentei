@@ -37,9 +37,8 @@ class IoServerNode(Node):
 
         self.store = BitStore(self.cfg.input_size, self.cfg.output_size)
         self.plant = Plant(self.cfg.cylinders)
-        plant_sensors = {c.retracted_sensor for c in self.cfg.cylinders}
-        plant_sensors |= {c.extended_sensor for c in self.cfg.cylinders}
-        self.plant_sensors = plant_sensors - {''}
+        self.plant_sensors = self.cfg.plant_sensors
+        self.signals = self.cfg.by_name()
 
         # 未操作の状態で初期化。b接点は操作していない時に ON
         for s in self.cfg.inputs:
@@ -81,7 +80,9 @@ class IoServerNode(Node):
         coils = self.store.coils()
         outputs = {s.name: coils[s.bit] for s in self.cfg.outputs}
         for name, value in self.plant.step(dt, outputs).items():
-            self.store.set_input(self.cfg.signal(name).bit, value)
+            sig = self.signals[name]
+            # b接点のセンサは検出時に OFF
+            self.store.set_input(sig.bit, value != sig.normally_closed)
         for name, pos in self.plant.positions().items():
             if self.published.get(('pos', name)) != pos:
                 self.published[('pos', name)] = pos

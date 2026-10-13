@@ -8,7 +8,8 @@
 # 入力の type:
 #   momentary  押している間だけ ON (押しボタン)
 #   alternate  押すたびに ON/OFF (セレクトスイッチ・トグル)
-#   sensor     plant (下記) が自動で ON/OFF する。パネルから手動で強制も可能
+#   sensor     センサ。plant (下記) で使うものは自動で ON/OFF し、手動操作は無視される
+#              plant で使わないものはパネルから ON/OFF できる
 # normally_closed: true にすると b 接点 (操作していない時に ON)。非常停止など
 #
 # 出力の type: lamp / buzzer / solenoid / motor (パネルの表示が変わるだけ)

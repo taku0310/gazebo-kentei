@@ -27,14 +27,20 @@ class Checker(Node):
     def __init__(self):
         super().__init__('kentei_checker')
         self.state = {}
+        self.rises = {}  # 信号ごとの OFF->ON 回数 (一瞬だけの ON も取りこぼさない)
         self.connected = False
         self.pubs = {}
         self.failures = 0
         for name in SIGNALS:
             self.create_subscription(Bool, f'kentei/state/{name}',
-                                     lambda m, n=name: self.state.__setitem__(n, m.data), LATCHED)
+                                     lambda m, n=name: self._on_state(n, m.data), LATCHED)
         self.create_subscription(Bool, 'kentei/plc_connected',
                                  lambda m: setattr(self, 'connected', m.data), LATCHED)
+
+    def _on_state(self, name: str, value: bool) -> None:
+        if value and not self.state.get(name):
+            self.rises[name] = self.rises.get(name, 0) + 1
+        self.state[name] = value
 
     def set(self, name: str, value: bool) -> None:
         if name not in self.pubs:
@@ -54,7 +60,7 @@ class Checker(Node):
                 print(f'  OK   {desc}')
                 return True
             time.sleep(0.02)
-        on = sorted(k for k, v in self.state.items() if v)
+        on = sorted(k for k, v in list(self.state.items()) if v)
         print(f'  NG   {desc}  (ON の信号: {", ".join(on) or "なし"})')
         self.failures += 1
         return False
@@ -84,8 +90,10 @@ def scenario(c: Checker) -> None:
     c.expect('運転開始', L1=True)
     c.wait_for('L4 が点滅する', lambda s: s.get('L4'), 1.0)
     for i in range(1, 4):
+        # 途中の後退端は次の前進がすぐ始まり一瞬しか ON にならないので、立ち上がり回数で判定する
+        ls1 = c.rises.get('LS1', 0)
         c.wait_for(f'{i} 回目 前進端', lambda s: s.get('LS2'), 4.0)
-        c.wait_for(f'{i} 回目 後退端', lambda s: s.get('LS1') and not s.get('SOL1'), 5.0)
+        c.wait_for(f'{i} 回目 後退端', lambda _s, n=ls1: c.rises.get('LS1', 0) > n, 5.0)
     c.wait_for('3 サイクルで完了 L5 + ブザー', lambda s: s.get('L5') and s.get('BZ') and not s.get('L1'), 2.0)
     c.wait_for('ブザーは 1 秒で止まる', lambda s: not s.get('BZ'), 2.0)
     c.set('SS1', False)
@@ -104,9 +112,9 @@ def main() -> int:
     rclpy.init()
     c = Checker()
     threading.Thread(target=rclpy.spin, args=(c,), daemon=True).start()
-    if not c.wait_for('OpenPLC 接続', lambda _s: c.connected, 30.0):
-        return 1
     try:
+        if not c.wait_for('OpenPLC 接続', lambda _s: c.connected, 30.0):
+            return 1
         scenario(c)
     finally:
         print('結果:', '合格' if c.failures == 0 else f'NG {c.failures} 件')

@@ -80,7 +80,7 @@ def configure(args) -> None:
             'INSERT INTO Slave_dev (dev_name, dev_type, slave_id, com_port, baud_rate, parity, data_bits, '
             'stop_bits, ip_address, ip_port, di_start, di_size, coil_start, coil_size, ir_start, ir_size, '
             'hr_read_start, hr_read_size, hr_write_start, hr_write_size, pause) '
-            'VALUES (?, "TCP", ?, "", 115200, "None", 8, 1, ?, ?, 0, ?, 0, ?, 0, 0, 0, 0, 0, 0, 0)',
+            "VALUES (?, 'TCP', ?, '', 115200, 'None', 8, 1, ?, ?, 0, ?, 0, ?, 0, 0, 0, 0, 0, 0, 0)",
             (DEVICE_NAME, cfg.unit_id, args.slave_host, args.slave_port or cfg.port,
              cfg.input_size, cfg.output_size))
         _set_setting(conn, 'Slave_polling', str(args.polling))

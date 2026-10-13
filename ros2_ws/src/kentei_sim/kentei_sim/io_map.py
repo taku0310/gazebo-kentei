@@ -1,7 +1,7 @@
 """I/O 定義 (YAML) の読み込みと OpenPLC アドレスへの対応付け."""
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 import yaml
 
@@ -64,6 +64,12 @@ class IoConfig:
 
     def by_name(self) -> Dict[str, Signal]:
         return {s.name: s for s in self.inputs + self.outputs}
+
+    @property
+    def plant_sensors(self) -> Set[str]:
+        """設備モデルが自動で動かすセンサ入力の名前."""
+        names = {c.retracted_sensor for c in self.cylinders} | {c.extended_sensor for c in self.cylinders}
+        return names - {''}
 
 
 def _parse_signals(items, direction: str, types) -> List[Signal]:

@@ -68,7 +68,7 @@ class PanelApp:
         in_frame = self._frame('入力 (操作 → PLC)', 0)
         out_frame = self._frame('出力 (PLC → 表示)', 1)
 
-        plant_sensors = {c.retracted_sensor for c in cfg.cylinders} | {c.extended_sensor for c in cfg.cylinders}
+        plant_sensors = cfg.plant_sensors
         self.input_leds = {}
         self.toggles = {}
         for row, s in enumerate(cfg.inputs):
